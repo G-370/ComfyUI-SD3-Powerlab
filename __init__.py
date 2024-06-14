@@ -133,7 +133,7 @@ class ImageToAttention:
 
     CATEGORY = "SD3 Power Lab/Hack"
 
-    def patch(self, sd3_model, joint_block, backbone, image, patch_strength, model_strength):
+    def patch(self, sd3_model, joint_block, backbone, attention_image, patch_strength, model_strength):
         m = sd3_model.clone()
         km = sd3_model.model_state_dict()
 
@@ -150,7 +150,7 @@ class ImageToAttention:
         if (attention_tensor is None):
             raise f"Could not locate attention tensor {tensor_location}"
         
-        modified_attention = image.clone().squeeze(0).view(4608,1536)
+        modified_attention = attention_image.clone().squeeze(0).view(4608,1536)
 
         m.add_patches({key_to_patch: (modified_attention,)}, patch_strength, model_strength)
 
