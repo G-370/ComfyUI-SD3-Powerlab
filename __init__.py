@@ -1,7 +1,11 @@
 from typing import NamedTuple
 from torch import Tensor
+import torchvision.transforms as T
 import torch
 import matplotlib.pyplot as plt
+
+to_tensor = T.ToTensor()
+to_img = T.ToPILImage()
 
 BACKBONE_ENUM = {
     'text': 'context_block',
@@ -77,12 +81,91 @@ class RenderAttentionSpot:
         else:
             return colormap_tensor(colormap, pre_image_tensor)
 
+def calculate_modified_tensor(tensor_area: Tensor, tensor_mask: Tensor, operation, operation_value):
+    modified_area = operation(tensor_area.clone()[tensor_mask], operation_value)
+
+
+class AttentionToImage:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "sd3_model": ("MODEL",),
+                "joint_block": ("INT", {"default": 0, "max": 23}),
+                "backbone": (["text", "latent"],),
+            }
+        }
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "render"
+
+    CATEGORY = "SD3 Power Lab/Hack"
+
+    def render(self, sd3_model, joint_block, backbone):
+        km = sd3_model.model_state_dict()
+
+        tensor_location = f'joint_blocks.{joint_block}.{BACKBONE_ENUM[backbone]}.attn.qkv.weight'
+        attention_tensor: Tensor = None
+
+        for k in km:
+            if tensor_location in k:
+                attention_tensor = km[k]
+        
+        if (attention_tensor is None):
+            raise f"Could not locate attention tensor {tensor_location}"
+
+        return attention_tensor.clone().view(1536, 1536, 3).unsqueeze(0)
+
+class ImageToAttention:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "sd3_model": ("MODEL",),
+                "joint_block": ("INT", {"default": 0, "max": 23}),
+                "backbone": (["text", "latent"],),
+                "attention_image": ("IMAGE",),
+                "patch_strength": ("FLOAT", {"default": 1.0, "max": 1.0, "min": 0.0}),
+                "model_strength": ("FLOAT", {"default": 0.0, "max": 1.0, "min": 0.0})
+            }
+        }
+    RETURN_TYPES = ("MODEL",)
+    FUNCTION = "patch"
+
+    CATEGORY = "SD3 Power Lab/Hack"
+
+    def patch(self, sd3_model, joint_block, backbone, image, patch_strength, model_strength):
+        m = sd3_model.clone()
+        km = sd3_model.model_state_dict()
+
+        tensor_location = f'joint_blocks.{joint_block}.{BACKBONE_ENUM[backbone]}.attn.qkv.weight'
+        attention_tensor: Tensor = None
+
+        key_to_patch = None
+
+        for k in km:
+            if tensor_location in k:
+                attention_tensor = km[k]
+                key_to_patch = k
+        
+        if (attention_tensor is None):
+            raise f"Could not locate attention tensor {tensor_location}"
+        
+        modified_attention = image.clone().squeeze(0).view(4608,1536)
+
+        m.add_patches({key_to_patch: (modified_attention,)}, patch_strength, model_strength)
+
+        return m  
+        
 
 NODE_CLASS_MAPPINGS = {
-    "G370SD3PowerLab_RenderAttention": RenderAttentionSpot
+    "G370SD3PowerLab_RenderAttention": RenderAttentionSpot,
+    "G370SD3PowerLab_AttentionToImage": AttentionToImage,
+    "G370SD3PowerLab_ImageIntoAttention": ImageToAttention
 }
 
 # A dictionary that contains the friendly/humanly readable titles for the nodes
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "G370SD3PowerLab_RenderAttention": "Render SD3 Attention"
+    "G370SD3PowerLab_RenderAttention": "Render SD3 Attention",
+    "G370SD3PowerLab_AttentionToImage": "SD3 Attention To Image",
+    "G370SD3PowerLab_ImageIntoAttention": "SD3 Image Into Attention"
 }
