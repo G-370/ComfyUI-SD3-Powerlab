@@ -56,7 +56,7 @@ class RenderAttentionSpot:
             raise f"Could not locate attention tensor {tensor_location}"
         
         pre_image_tensor: Tensor = None
-        q,k,v = None
+        q,k,v = (None,None,None)
 
         if (view == 'all-stacked'):
             pre_image_tensor: Tensor = attention_tensor
