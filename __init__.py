@@ -31,9 +31,9 @@ class RenderAttentionSpot:
         return {
             "required": {
                 "sd3_model": ("MODEL",),
-                "joint_block": ("NUMBER", {"default": 0, "max": 23}),
+                "joint_block": ("INT", {"default": 0, "max": 23}),
                 "backbone": (["text", "latent"],),
-                "view": (["query", "key", "value", "all-stacked", "all-interposed"]),
+                "view": (["query", "key", "value", "all-stacked", "all-interposed"],),
                 "colormap": (["none", *matplotlib_colormaps],)
             }
         }
