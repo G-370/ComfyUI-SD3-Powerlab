@@ -10,7 +10,7 @@ BACKBONE_ENUM = {
 
 def colormap_tensor(colormap, tensor: Tensor):
     if (colormap == 'none'):
-        return tensor.unsqueeze(-1).repeat(1, 1, 3)
+        return tensor.repeat(1, 1, 3).unsqueeze(0)
 
     # Normalize the tensor to the range [0, 1]
     tensor_min = tensor.min()
@@ -20,7 +20,7 @@ def colormap_tensor(colormap, tensor: Tensor):
 
     colormap = plt.get_cmap(colormap)
     tensor_colored_np = colormap(tensor_np)
-    tensor_colored = torch.from_numpy(tensor_colored_np[:, :, :3])
+    tensor_colored = torch.from_numpy(tensor_colored_np)#tensor_colored_np[:, :, :3])
     return tensor_colored
 
 matplotlib_colormaps = plt.colormaps()
