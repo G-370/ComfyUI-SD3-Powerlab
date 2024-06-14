@@ -113,7 +113,7 @@ class AttentionToImage:
         if (attention_tensor is None):
             raise f"Could not locate attention tensor {tensor_location}"
 
-        return attention_tensor.clone().view(1536, 1536, 3).unsqueeze(0)
+        return (attention_tensor.clone().view(1536, 1536, 3).unsqueeze(0),)
 
 class ImageToAttention:
     @classmethod
@@ -154,7 +154,7 @@ class ImageToAttention:
 
         m.add_patches({key_to_patch: (modified_attention,)}, patch_strength, model_strength)
 
-        return m  
+        return (m,)
         
 
 NODE_CLASS_MAPPINGS = {
