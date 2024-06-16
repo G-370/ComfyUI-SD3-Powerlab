@@ -81,9 +81,98 @@ class RenderAttentionSpot:
         else:
             return colormap_tensor(colormap, pre_image_tensor)
 
-def calculate_modified_tensor(tensor_area: Tensor, tensor_mask: Tensor, operation, operation_value):
-    modified_area = operation(tensor_area.clone()[tensor_mask], operation_value)
+def tensor2dToImage(tsr: Tensor):
+    return (tsr.unsqueeze(-1).repeat((1,1,3)).unsqueeze(0),)
 
+def tensor1dToImage(tsr: Tensor):
+    return (tsr.unsqueeze(-1).repeat((1,256)).unsqueeze(0),)
+
+def imageTo2dTensor(img: Tensor):
+    return img.squeeze()[:,:,0].clone()
+
+def imageTo1dTensor(img: Tensor):
+    return img.squeeze().median(1).values.median(1).values.clone()
+
+class LayerToImage:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "sd3_model": ("MODEL",),
+                "layer": ("STRING", {"multiline": True, "dynamicPrompts": True})
+            }
+        }
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "render"
+
+    CATEGORY = "SD3 Power Lab/Hack"
+
+    def render(self, sd3_model, layer):
+        km = sd3_model.model_state_dict()
+
+        tensor_location = layer
+        tensor: Tensor = None
+
+        for k in km:
+            if tensor_location in k:
+                tensor = km[k]
+        
+        if (tensor is None):
+            raise f"Could not locate tensor {tensor_location}"
+
+        if (len(tensor.shape) == 2):
+            return tensor2dToImage(tensor)
+        elif (len(tensor.shape) == 1):
+            return tensor1dToImage(tensor)
+        else:
+            raise f"It was not possible to extract the specified layer as an image due to its shape of {tensor.shape}"
+
+class ImageIntoLayer:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "sd3_model": ("MODEL",),
+                "layer": ("STRING", {"multiline": True, "dynamicPrompts": True}),
+                "layer_image": ("IMAGE",),
+                "patch_strength": ("FLOAT", {"default": 1.0, "max": 1.0, "min": 0.0}),
+                "model_strength": ("FLOAT", {"default": 0.0, "max": 1.0, "min": 0.0}),
+                "tensor_dimension": (["2d", "1d"],)
+            }
+        }
+    RETURN_TYPES = ("MODEL",)
+    FUNCTION = "patch"
+
+    CATEGORY = "SD3 Power Lab/Hack"
+
+    def patch(self, sd3_model, layer, layer_image: Tensor, patch_strength, model_strength, tensor_dimension):
+        m = sd3_model.clone()
+        km = sd3_model.model_state_dict()
+
+        tensor_location = layer
+        tensor: Tensor = None
+
+        key_to_patch = None
+
+        for k in km:
+            if tensor_location in k:
+                tensor = km[k]
+                key_to_patch = k
+        
+        if (tensor is None):
+            raise f"Could not locate attention tensor {tensor_location}"
+        
+        if (tensor_dimension == '2d'):
+            modified_layer = imageTo2dTensor(layer_image)
+        elif (tensor_dimension == '1d'):
+            print("The image dimensions before the layerification", layer_image.shape)
+            modified_layer = imageTo1dTensor(layer_image)
+            print("The image dimensions AFTER the layerification", modified_layer.shape)
+
+
+        m.add_patches({key_to_patch: (modified_layer,)}, patch_strength, model_strength)
+
+        return (m,)
 
 class AttentionToImage:
     @classmethod
@@ -160,12 +249,16 @@ class ImageToAttention:
 NODE_CLASS_MAPPINGS = {
     "G370SD3PowerLab_RenderAttention": RenderAttentionSpot,
     "G370SD3PowerLab_AttentionToImage": AttentionToImage,
-    "G370SD3PowerLab_ImageIntoAttention": ImageToAttention
+    "G370SD3PowerLab_ImageIntoAttention": ImageToAttention,
+    "G370SD3PowerLab_LayerToImage": LayerToImage,
+    "G370SD3PowerLab_ImageIntoLayer": ImageIntoLayer
 }
 
 # A dictionary that contains the friendly/humanly readable titles for the nodes
 NODE_DISPLAY_NAME_MAPPINGS = {
     "G370SD3PowerLab_RenderAttention": "Render SD3 Attention",
     "G370SD3PowerLab_AttentionToImage": "SD3 Attention To Image",
-    "G370SD3PowerLab_ImageIntoAttention": "SD3 Image Into Attention"
+    "G370SD3PowerLab_ImageIntoAttention": "SD3 Image Into Attention",
+    "G370SD3PowerLab_LayerToImage": "SD3 Layer to Image",
+    "G370SD3PowerLab_ImageIntoLayer": "SD3 Image into Layer"
 }
