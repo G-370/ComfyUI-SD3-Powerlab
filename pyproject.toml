@@ -1,0 +1,14 @@
+[project]
+name = "comfyui-sd3-powerlab"
+description = "Nodes:Render SD3 Attention, SD3 Attention To Image, SD3 Image Into Attention."
+version = "1.0.0"
+license = "LICENSE"
+
+[project.urls]
+Repository = "https://github.com/G-370/ComfyUI-SD3-Powerlab"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI-SD3-Powerlab"
+Icon = ""
