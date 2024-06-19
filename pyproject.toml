@@ -9,6 +9,6 @@ Repository = "https://github.com/G-370/ComfyUI-SD3-Powerlab"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "g370"
 DisplayName = "ComfyUI-SD3-Powerlab"
 Icon = ""
