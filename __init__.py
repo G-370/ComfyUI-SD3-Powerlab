@@ -124,6 +124,8 @@ class LayerToImage:
             return tensor2dToImage(tensor)
         elif (len(tensor.shape) == 1):
             return tensor1dToImage(tensor)
+        elif (len(tensor.shape) == 3 and layer == "diffusion_model.pos_embed"):
+            return tensor2dToImage(tensor[0])
         else:
             raise f"It was not possible to extract the specified layer as an image due to its shape of {tensor.shape}"
 
@@ -137,7 +139,7 @@ class ImageIntoLayer:
                 "layer_image": ("IMAGE",),
                 "patch_strength": ("FLOAT", {"default": 1.0, "max": 1.0, "min": 0.0}),
                 "model_strength": ("FLOAT", {"default": 0.0, "max": 1.0, "min": 0.0}),
-                "tensor_dimension": (["2d", "1d"],)
+                "tensor_dimension": (["2d", "1d", "(1,a,b)"],)
             }
         }
     RETURN_TYPES = ("MODEL",)
@@ -168,6 +170,8 @@ class ImageIntoLayer:
             print("The image dimensions before the layerification", layer_image.shape)
             modified_layer = imageTo1dTensor(layer_image)
             print("The image dimensions AFTER the layerification", modified_layer.shape)
+        elif (tensor_dimension == '(1,a,b)'):
+            modified_layer = imageTo2dTensor(layer_image).unsqueeze(0)
 
 
         m.add_patches({key_to_patch: (modified_layer,)}, patch_strength, model_strength)
